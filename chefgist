@@ -1,0 +1,324 @@
+1.Download starter kit from chef server to workstation
+2.Unzip - It becomes chef-repo
+3.Permit root login on node in sshd_config and restart ssh daemon
+4. Bootstrap the node using "knife bootstrap nodname user password" . It will install chef , ohai and run first time chef-client  . Need to remove validator.pem.Edit client.rb for log_level to info/debug
+5. Create cookbook using "knife create cookbook apache". It will create apache dir inside cookbook dir. Move to apache/recipe dir and edit default.rb. 
+
+package httpd do
+	action :install
+end
+service httpd do
+ 	action [:enable, :start]
+end
+
+   
+6.Uload recipe to chef server using “knife cookbook upload apache”
+7.Add runlist to node 
+	knife node run_list add <nodename> “recipe[apache]”
+keep adding recipes to this run list
+
+8.Upload cookbook
+
+9.Run chef-client on node which will install httpd , runs ohai.
+10.create another cookbook like this
+file “/etc/chef/validation.pem” do
+	action :delete
+end
+follow through steps 5-8
+cookbook run list would be like this
+knife node run_list add <nodename>  -b “recipe[security]” “recipe[apache]”
+upload cookbook
+run convergence
+————
+11.Attribtes are like variables or properties. Have information. lives in attributes dir. Edit default.rb. They are specific details about node like current state,state after last convergence, state should be after next run.
+These can be defined by Ohai, cookbooks, Roles, Environments
+There is attribute precedence.default is lowest
+default <- force_default <-Normal <-Override <-force_override <-Automatic(ohai)
+
+12.an attribute is like this defined in a mapping. This is taken to a template(.erb)
+
+default[“apache”][“sites”][“testsite1”] = { “port” => 80, “domain” => “ns1.test.com”}
+default[“apache”][“sites”][“testsite2”] = { “port” => 80, “domain” => “ns2.test.com”}
+
+can have if-else on condition of os or anything
+13.Modify the recipe like below. site name is testsite1,2 and data is  { “port” => 80, “domain” => “ns.test.com”}
+
+package httpd do
+action :install
+end
+
+node[“apache”][“sites”].each do | sitename , data |
+	document_root =“/content/site/#{sitename}/“
+	directory directory_root do
+		mode “0755”
+		recursive true
+	end
+	template “/etc/httpd/conf.d/#{sitename}.conf” do
+		source “vhost.erb"
+		mode “0644”
+		variables(
+				:document_root => document_root,
+				:port => data[“port”],
+				:domain => data[“domain”]
+		)
+		notifies :restart, “service[httpd]
+	end
+end
+
+service httpd do
+ 	action [:enable, :start]
+end
+
+14.Create template .go to templates/default/ dir and create an erb file vhost.erb which will serve as template 
+
+<% if @port == 80  -%>
+ 	NameVirtualHost *:80
+<% end -%>
+
+<VirtualHost *:<%= @port%>
+	ServerName <%= @domainName %>
+	DocumentRoot <%= @document_root%>
+	<Directory />
+		-
+		-
+	</Directory>
+	<Directory<%= @document_root%> >
+		-
+		-
+	</Directory>
+
+</VirtualHost>
+
+Upload cook book and run chef convergence It will populate the template file
+You can include a recipe inside another recipe and create dependencies
+	Create a cookbook php
+	edit metadata.rb in main apache dir and add following line
+		depends “php”
+	upload php cookbook .
+	edit default recipe of apache and add following line
+		include_recipe “php::default”
+	Upload cookbook
+	run convergence 
+You can put files in files dir of cookbook to upload to server
+	edit php recipe like
+	
+	package “php” do
+		action :install
+	end
+	cookbook_file “/etc/php.ini” do
+		source “php.ini”
+		mode “0644"
+	end
+	
+	upload php cookbook, run convergence
+18.You can run Linux commands on node.
+	in apache recipe, add following lines
+	
+	execute “rm /etc/httpd/conf.d/welcome.conf” do
+		only_if do
+			File.exist(“/etc/httpd/conf.d/welcome.conf”)
+		end
+		notifies :restart, “service[httpd]"
+	end
+19.You can add distribution tp recipe ( ubuntu vs cents)
+	In attributes file, add another site name entry and then add following entry 
+
+	case node[“platform”] do
+		when “centos”
+			default[“apache”][“package”] = “httpd”
+		when “ubuntu”
+			default[“apache”][“package”] = “apahe2”
+	end
+
+	when Ohai runs, it gets the value from OS and then runs cookbook
+	
+	edit recipe file like
+	
+	if node[“platform”] ==“ubuntu” do
+		execute “apt-get update -y” do
+		done
+	done
+	package “apache2” do
+		package_name node[“apache”][“package”]
+	end
+	
+	if node[“platform”] ==“ubuntu” 
+		template_location = “/etc/apahe2/site-enabled/#{sitename}.conf”
+	elsif node[“platform”] ==“ubuntu” 
+		template_location = “/etc/httpd/conf.d/#{sitename}.conf”
+	end
+
+	template template_location do
+	-
+	-
+		notifies :restart , "service[httpd]"
+	done
+	
+	service “httpd” do
+		service_name node[“apache”][“package”]
+		action :
+	done 
+	
+	upload and run
+20.Node object is made of run lists => recipes + attributes. Attributes are build during chef-client run process => Ohai, 
+You can run a search for an attribute using 
+knife search node “key:pattern”
+search inside of recipes 
+      
+     knife node show ubuntunodev-a apache.sites
+     knife node show ubuntunodev-a memory.swap
+	knife search node “os:linux AND platform_family:debian” -a platform
+	knife search node “platform:ubuntu” -a memory.swap.free
+	knife search node “kernel_release:3.2*” -a kernel.release
+	
+	
+Data Bag is global variable stored in json and accessible from chef server like users,admin,credentials etc
+       dir is data_bags in chef-repo. Create users, groups dir. Inside each jason file will reside.
+	admin.json
+	{
+		“id” : “admin”,
+		“cpmment": “admin user”,
+		“uid” : “2005”
+		“gid” : 0,
+		“home” : “/home.admin/“,
+		password : “dasdas”
+	}
+	in groups dir sudoers.json
+	{
+		“id” : “suoder”,
+		“git” : “3005”
+		“members : [“admin”, “user"]
+	}
+
+	run commands : knife data bag create users, knife data bag create groups : will create on server
+	knife data_bag from file users admin.json; knife data_bag from file groups sudoers.json  .it will upload to chef server.
+	now you can search using knife command : knife search users “id:admin”
+	
+	To use data bag ,a recipe is created : knife cookbook create localusers
+	edit the recipe default.rb like below
+	search(:users, “*:*”).each do |data|
+		user   data[“id”] do
+			comment data[“comment”]
+			uid data[“uid”],
+			gid data[“gid”],
+			home data[“home”],
+			shell data[“chell”]
+		end
+	end	
+	
+	upload cookbook and add to run list,, run convergence 
+	create a groups recipe in groups.rb
+
+	search(:groups, “*:*”).each do |data|
+		group data[“id”] do
+			gid data[“gid”],
+			member data[“members”]
+		end
+	end	
+
+	in deafult.rb, add a line . No need to add depends in metadata.rb as both are in same cookbook 
+	
+	include_recipe “localusers::group”.
+
+	upload cookbook ,, run convergence . It will add users to admin
+
+23.Environments
+	different cookbooks to prod/qa/stage, environment level attributes, Allows sharing of cookbooks in org
+	Environment information is stored in json or .rb files and reside in chef-repo/environments
+	node need to be assigned to a env. for that 
+		modify the client.rb or use knife-flip or assign manually on node
+	using env, you can have different versions of cookbooks for different env
+	edit the metadata.rb of apache cookbook and  add/edit version
+	create environments dir. then create dev.rb with foliowing content
+
+	name “dev”
+	description “dev env”
+	cookbook “apache”, “= 0.1.5”
+	override_attributes({
+		“author” =>
+			“name” => “Neeraj”
+	})
+
+	knife environment list -w
+	knife environment  from file dev.rb ( from environments dir)
+	
+	now edit /etc/chef/client.rb file on the dev nodes and line as
+	environment “dev”
+	
+	create the 0.1.5 version of cookbook and apply to dev nodes
+	edit the default.rb file inside attributes dir of apache cookbook . add following 
+		default[“author”][“name”] = “babaji”
+	edit the default,rb of recipe  . add template variable like 
+		:author_name =>  node[“author”][“name”]
+	edit the templates/default/index.html.erb
+		<h4><%= @author_name %> </h4>
+	edit the metadata.rb to reflect version 0.1.5.
+	upload cookbook
+	run chef convergence
+
+	Deploy to different environments:
+	create an environment file as prod.rb
+	
+	name “prod”
+	description “prod env”
+	cookbook “apache”, “= 0.1.0”
+	
+	knife environment  from file dev.rb 
+	 
+	Remember that we did not edit the index.erb,default.rb for earlier version of cookbook.
+	Now edit client.rb of a prod node add line as 
+	environment “prod”
+	run convergence
+	
+	Environment level attribute take precedence over default of cookbook and recipe
+
+	with knife command you can add/delete env, compare
+		knife environment compare dev prod
+		knife environment compare —all
+		knife environment delete dev ( only from chef server)
+		knife environment show dev
+
+24.	roles : A way to define patterns and process across many nodes. A listing of recipes and attributes for same kind of function like web servers . to be executed on  node. Instead of run_list, we can assign node a role. A base role can be assigned inside of roles run_list
+
+	knife role create role_name 
+	chef-repo/roles/rolename.rb
+	knife role from file chef-repo/roles/rolename.rb
+	knife role list -w
+	knife role delete rolename
+	
+Create a web server role :
+	mkdir roles;vi webserver.rb
+		name “webserver”
+		description “web servr”
+		run_list  “recipe[apache], "recipe[localusers]"	
+
+	
+	knife role from file chef-repo/roles/webserver.rb
+	( remove previous run_list from that node. You can do it on chef server)
+	
+	knife node run_list add linuxnode “roles[webserver]"
+
+Create a base role
+	vi webserver.rb and remove security and local user recipe. These will be added to base role.
+	knife role from file chef-repo/roles/webserver.rb
+	vi base.rb
+		name’base’
+		description “on all nodes”
+		run_list “recipe[security]” "recipe[localusers]”
+	vi web server.rb  and modify like below
+		run_list “role[base]” "recipe[apache]”
+	vi database.rb
+		run_list “role[base]” “recipe[database]"
+	
+	knife role from file chef-repo/roles/webserver.rb and 
+	knife role from file chef-repo/roles/database.rb 
+	knife role from file chef-repo/roles/base.rb 
+		
+	
+	
+
+	
+
+
+ 
+
