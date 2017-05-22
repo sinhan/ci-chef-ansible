@@ -50,7 +50,11 @@ What is difference in each step if application is
 3. Javascript
 
 
+------------
 
+These deployment jobs would edit application data bags and application environment files before uploading them to the Chef server, find all nodes in the specified environment with the deploying app’s recipes, run the Chef client on each node and send an email notification of the result of the deployment.
+
+---------
 
   
 
