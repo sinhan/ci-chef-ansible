@@ -1,0 +1,56 @@
+Stack : Jenkins, Github, Nexus, npm, chef, 
+TestStack : Selenium , TestNg,Junit
+Application Stack : Java, Tomcat, nodejs
+Build tools : Ant, npm, Maven
+
+1. Github stores repository
+2. Jenkins poll the repository
+3. Any changes, jenkins will run compile , unit tests , sonar code analysis and PMD
+4. After the unit tests are passed and code is of good quality, build artifact will get uploaded to nexus.
+
+Scenario 1.  (When we have fixed environments : known server names and ip addresses
+
+5. Code gets deployed to multiple server in a functional test environment ( with LB ) using chef 
+  How ? ( what else can be used. ansible ??). If I want to pass a artifact details to another tool, how can we do that.
+  How can we pass artifact details to deployment tool
+  
+6.Code gets tested in functional test environment using chef.
+  How ? How the nexus params gets passed. And What is tested ?
+
+7.Code gets promoted to ( or tagged ??)  to nexus in different place
+  How ?
+
+8. Code gets deployed to integration environment using chef. 
+
+9.  Integration tests are run ( what exactly they are). What tool to use ?
+
+10. Artifact is again tagged/promoted in Nexus
+
+10. Code is deployed to UAT environment. I
+
+11. UAT tests are one. WShat are these and are these manual ?
+
+12. Artifact is again tagged/promoted in Nexus
+
+13. Code is deployed to prod like or stage environment.
+
+= >Scenario 2.  (When we have to create disposable funtional/integration env) 
+
+14. How do we create/delete environment and how do pass details to jenkins ?
+
+15.
+
+16.
+
+
+=======
+What is difference in each step if application is 
+1. Java
+2. Node
+3. Javascript
+
+
+
+
+  
+
