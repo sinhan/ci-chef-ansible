@@ -54,7 +54,15 @@ What is difference in each step if application is
 
 These deployment jobs would edit application data bags and application environment files before uploading them to the Chef server, find all nodes in the specified environment with the deploying app’s recipes, run the Chef client on each node and send an email notification of the result of the deployment.
 
----------
+--------- Docker CI flow- ---------
 
-  
+Check out the code
+Run pre-deployment tests
+Compile and/or package the code
+Build the container
+Push the container to the registry
+Deploy the container to the production server
+Integrate the container
+Run post-integration tests
+Push the tests container to the registry  
 
