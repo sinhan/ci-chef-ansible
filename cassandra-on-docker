@@ -1,0 +1,28 @@
+1. Docker + Networking • Docker uses Linux Ethernet Bridges for basic software deﬁned routing. 
+Use the host network stack  (—net=host), only saw a ~10% hit on network performance 
+2.Use volume mount folders to the underlying host!
+3.Hooray volume mounts use the underlying ﬁlesystem.
+4.Use --cap-add  for process capabilities
+5.Docker + SIGTERM propagation • When stopping the process docker will send a SIGTERM. • PID 1 does not have default signal handlers
+6.Docker + SIGTERM propagation • Java to the rescue! • Make sure you run the cassandra bash script with -f (foreground) 
+7.Disable automatic updates + restarts (seriously do this) • Fix logging, otherwise you will log to 3 locations 
+8.Use coreOS
+9.systemd for service management and journald for logging
+10.Cassandra runs as PID 1 in the container 
+• 1 primary process per container model 
+• Runs in foreground mode (-f) 
+• Responds to SIGTERM via docker stop, systemctl stop, etc 
+• Cassandra data and configuration is persistent on host 
+• Survives container restart 
+• Cassandra data and configuration directories mounted from host  docker run -v /var/lib/instaclustr/etc/cassandra:/etc/cassandra
+• Docker containers managed via systemd 
+• cassandra.service execs docker run cassandra … 
+• systemctl [start|stop|restart|status|…] cassandra 
+• Cassandra logging configured to write only to stdout 
+• systemd logging best practice 
+• Cassandra ⇢ Docker ⇢ systemd ⇢ journald • journalctl -u cassandra
+
+11. https://github.com/joeljacobson/dse-docker
+12.
+
+
