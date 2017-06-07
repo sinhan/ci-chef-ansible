@@ -19,10 +19,15 @@ end
 
 ========
 version.json is : 
+
 { "version" : "1.1.0" , "run_list" : "starter"}
 
 command to run is :
 after copy the json file
+
 knife ssh 'name:qanode1' 'sudo cp version.json ~/version.json'
+knife ssh 'name qanode1' 'sudo chef-client -j version.json'
+
+
 
 
